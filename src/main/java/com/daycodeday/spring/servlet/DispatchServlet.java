@@ -4,6 +4,7 @@ import com.daycodeday.demo.mvc.action.DemoAction;
 import com.daycodeday.spring.annotation.Autowrited;
 import com.daycodeday.spring.annotation.Controller;
 import com.daycodeday.spring.annotation.Service;
+import com.daycodeday.spring.context.ZdyApplicationContext;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -26,6 +27,7 @@ public class DispatchServlet extends HttpServlet {
     private Properties contextConfig = new Properties();
     private Map<String, Object> beanMap = new ConcurrentHashMap<>();
     private List<String> classNames = new ArrayList<>();
+    private final String  LOCATION="contextConfigLocation";
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -39,6 +41,11 @@ public class DispatchServlet extends HttpServlet {
 
     @Override
     public void init(ServletConfig config) throws ServletException {
+//        initSpring(config);
+        ZdyApplicationContext context=new ZdyApplicationContext(config.getInitParameter(LOCATION));
+    }
+
+    private void initSpring(ServletConfig config) {
         //开始初始化的进程
         //定位
         doLoadConfig(config.getInitParameter("contextConfigLocation"));
