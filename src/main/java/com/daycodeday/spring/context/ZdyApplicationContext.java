@@ -14,6 +14,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ZdyApplicationContext implements BeanFactory {
@@ -43,8 +44,8 @@ public class ZdyApplicationContext implements BeanFactory {
         //在这里自动调用getBean方法
         doAutorited();
 
-        MyAction  myAction= (MyAction) this.getBean("myAction");
-        myAction.query(null,null,"人性");
+//        MyAction myAction = (MyAction) this.getBean("myAction");
+//        myAction.query(null, null, "人性");
     }
 
     /**
@@ -59,7 +60,7 @@ public class ZdyApplicationContext implements BeanFactory {
         }
         //TODO 暴力解决空指针问题
         for (Map.Entry<String, BeanWrapper> beanWrapperEntry : this.beanWrapperMap.entrySet()) {
-           populateBean(beanWrapperEntry.getKey(),beanWrapperEntry.getValue().getWrappedInstance());
+            populateBean(beanWrapperEntry.getKey(), beanWrapperEntry.getValue().getWrappedInstance());
         }
     }
 
@@ -68,19 +69,19 @@ public class ZdyApplicationContext implements BeanFactory {
         if ((clazz.isAnnotationPresent(Controller.class) || clazz.isAnnotationPresent(Service.class))) {
             return;
         }
-        Field[] fields=clazz.getDeclaredFields();
-        for (Field field:fields){
-            if (!field.isAnnotationPresent(Autowrited.class)){
+        Field[] fields = clazz.getDeclaredFields();
+        for (Field field : fields) {
+            if (!field.isAnnotationPresent(Autowrited.class)) {
                 continue;
             }
-            Autowrited autowrited= field.getAnnotation(Autowrited.class);
-            String autowritedBeanName=autowrited.value().trim();
-            if ("".equals(autowritedBeanName)){
-                autowritedBeanName=field.getType().getName();
+            Autowrited autowrited = field.getAnnotation(Autowrited.class);
+            String autowritedBeanName = autowrited.value().trim();
+            if ("".equals(autowritedBeanName)) {
+                autowritedBeanName = field.getType().getName();
             }
             field.setAccessible(true);
             try {
-                field.set(instance,this.beanWrapperMap.get(autowritedBeanName).getWrappedInstance());
+                field.set(instance, this.beanWrapperMap.get(autowritedBeanName).getWrappedInstance());
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -189,4 +190,20 @@ public class ZdyApplicationContext implements BeanFactory {
         }
         return null;
     }
+
+    public int getBeanDefinitionCount() {
+        return this.beanDefinitionMap.size();
+//        return getBeanFactory().getBeanDefinitionCount();
+    }
+
+    public String[] getBeanDefinitionNames() {
+        return this.beanDefinitionMap.keySet().toArray(new String[this.beanDefinitionMap.size()]);
+//        return getBeanFactory().getBeanDefinitionNames();
+    }
+
+    public Properties getConfig(){
+        return this.reader.getConfig();
+    }
+
+
 }

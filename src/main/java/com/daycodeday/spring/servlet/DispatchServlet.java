@@ -1,13 +1,12 @@
 package com.daycodeday.spring.servlet;
 
 import com.daycodeday.demo.mvc.action.DemoAction;
-import com.daycodeday.spring.annotation.Autowrited;
-import com.daycodeday.spring.annotation.Controller;
-import com.daycodeday.spring.annotation.Service;
+import com.daycodeday.spring.annotation.*;
 import com.daycodeday.spring.context.ZdyApplicationContext;
 import com.daycodeday.spring.webmvc.ModelAndView;
 import com.daycodeday.spring.webmvc.ZdyHandlerAdapter;
 import com.daycodeday.spring.webmvc.ZdyHandlerMapping;
+import com.daycodeday.spring.webmvc.ZdyViewResolver;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -17,29 +16,34 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.security.KeyStore;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DispatchServlet extends HttpServlet {
+    private String TAG = "ZdyDispatchServlet";
     private Properties contextConfig = new Properties();
     private Map<String, Object> beanMap = new ConcurrentHashMap<>();
     private List<String> classNames = new ArrayList<>();
     private final String LOCATION = "contextConfigLocation";
-//    private Map<String, ZdyHandlerMapping> handlerMapping = new HashMap<>();
+    //    private Map<String, ZdyHandlerMapping> handlerMapping = new HashMap<>();
     //思考一下这样设计的经典之处
     //ZdyHandlerMapping 最核心的设计，也是最经典的
     //它牛逼到直接干掉了Struts,WebWork等MVC框架
-    private List<ZdyHandlerMapping> handlerMappings=new ArrayList<>();
+    private List<ZdyHandlerMapping> handlerMappings = new ArrayList<>();
 
-    private List<ZdyHandlerAdapter> handlerAdapters=new ArrayList<>();
+    private Map<ZdyHandlerMapping, ZdyHandlerAdapter> handlerAdapters = new HashMap();
+
+    private List<ZdyViewResolver> viewResolvers = new ArrayList<>();
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doPost(req, resp);
+        this.doPost(req, resp);
     }
 
     @Override
@@ -60,27 +64,82 @@ public class DispatchServlet extends HttpServlet {
         //对象.方法名才能调用
         //对象要从IOC容器中获取
 //        method.invoke(context)
-//        doDispatch(req,resp);
+
+        try {
+            doDispatch(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+            try {
+                resp.getWriter().write("500 Exception,Details:\r\n" + Arrays.toString(e.getStackTrace())
+                        .replaceAll("\\[|\\]", "").replaceAll("\\\\s", "\r\n"));
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
+
     }
 
-    private void doDispatch(HttpServletRequest req, HttpServletResponse resp) {
+    private void doDispatch(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+        //根据用户请求的URL来获得一个Handler
         ZdyHandlerMapping handlerMapping = getHandler(req);
+        if (handlerMapping == null) {
+            resp.getWriter().write("404 Not Found\r\n@ZdyMVC");
+        }
         ZdyHandlerAdapter handlerAdapter = getHandlerAdapter(handlerMapping);
-        ModelAndView mv = handlerAdapter.handle(req, resp, handlerMapping);
-        processDispatchResult(resp, mv);
+        if (handlerAdapter != null) {
+            //这一步只是调用方法，得到返回值
+            ModelAndView mv = handlerAdapter.handle(req, resp, handlerMapping);
+            //这一步才是真正的输出
+            processDispatchResult(resp, mv);
+        }
+
 
     }
 
-    private void processDispatchResult(HttpServletResponse resp, ModelAndView mv) {
-        //TODO 调用ViewResolver的resolveView方法
+    private void processDispatchResult(HttpServletResponse resp, ModelAndView mv) throws Exception {
+        // 调用ViewResolver的resolveView方法
+        if (null == mv) {
+            return;
+        }
 
+        if (this.viewResolvers.isEmpty()) {
+            return;
+        }
+
+        for (ZdyViewResolver viewResolver : this.viewResolvers) {
+
+            if (!mv.getViewName().equals(viewResolver.getViewName())) {
+                continue;
+            }
+            String out = viewResolver.viewResolver(mv);
+            if (out != null) {
+                resp.getWriter().write(out);
+                break;
+            }
+        }
     }
 
     private ZdyHandlerAdapter getHandlerAdapter(ZdyHandlerMapping handlerMapping) {
-        return null;
+        if (this.handlerAdapters.isEmpty()) {
+            return null;
+        }
+        return this.handlerAdapters.get(handlerMapping);
     }
 
     private ZdyHandlerMapping getHandler(HttpServletRequest req) {
+        if (this.handlerMappings.isEmpty()) {
+            return null;
+        }
+        String url = req.getRequestURI();
+        String contextPath = req.getContextPath();
+        url = url.replace(contextPath, "").replaceAll("/+", "/");
+        for (ZdyHandlerMapping handler : this.handlerMappings) {
+            Matcher matcher = handler.getPattern().matcher(url);
+            if (!matcher.matches()) {
+                continue;
+            }
+            return handler;
+        }
         return null;
     }
 
@@ -127,7 +186,14 @@ public class DispatchServlet extends HttpServlet {
     }
 
     private void initViewResolvers(ZdyApplicationContext context) {
-
+        //在页面敲一个http://localhost/first.html
+        //解决一个页面名字和模板文件关联的问题
+        String templateRoot = context.getConfig().getProperty("templateRoot");
+        String templateRootPath = this.getClass().getClassLoader().getResource(templateRoot).getFile();
+        File templateRootDir = new File(templateRootPath);
+        for (File template : templateRootDir.listFiles()) {
+            this.viewResolvers.add(new ZdyViewResolver(template.getName(), template));
+        }
     }
 
     private void initRequestToViewNameTranslator(ZdyApplicationContext context) {
@@ -139,7 +205,36 @@ public class DispatchServlet extends HttpServlet {
     }
 
     private void initHandlerAdapters(ZdyApplicationContext context) {
-
+        //在初始化阶段，我们能做的就是，将这些参数的名字或者类型按一定的顺序保存下来
+        //因为后面用反射调用的时候，传的形参是一个数组
+        //可以通过记录这些参数的位置index，挨个从数组中填值，这样的话，就和参数的顺序无关了
+        //
+        for (ZdyHandlerMapping handlerMapping : this.handlerMappings) {
+            //每一个方法有一个参数列表，那么这里保存的是形参列表
+            Map<String, Integer> paraMapping = new HashMap<>();
+            //这里只是处理命名参数
+            Annotation[][] pa = handlerMapping.getMethod().getParameterAnnotations();
+            for (int i = 0; i < pa.length; i++) {
+                for (Annotation a : pa[i]) {
+                    if (a instanceof RequestParam) {
+                        String paraName = ((RequestParam) a).value();
+                        if (!"".equals(paraName.trim())) {
+                            paraMapping.put(paraName, i);
+                        }
+                    }
+                }
+            }
+            //接下来我们处理非命名参数
+            //只处理Request和Response
+            Class<?>[] paramTypes = handlerMapping.getMethod().getParameterTypes();
+            for (int i = 0; i < paramTypes.length; i++) {
+                Class<?> type = paramTypes[i];
+                if (type == HttpServletRequest.class || type == HttpServletResponse.class) {
+                    paraMapping.put(type.getName(), i);
+                }
+            }
+            this.handlerAdapters.put(handlerMapping, new ZdyHandlerAdapter(paraMapping));
+        }
     }
 
     /**
@@ -151,7 +246,32 @@ public class DispatchServlet extends HttpServlet {
         //按照我们通常的理解应该是一个Map
         //Map<String,Method> map;
         //map.put(url,Method)
-
+        //首先从容器中取到所有的实例
+        String[] beanNames = context.getBeanDefinitionNames();
+        for (String beanName : beanNames) {
+            Object controller = context.getBean(beanName);
+            Class<?> clazz = controller.getClass();
+            if (!clazz.isAnnotationPresent(Controller.class)) {
+                continue;
+            }
+            String baseUrl = "";
+            if (clazz.isAnnotationPresent(RequestMapping.class)) {
+                RequestMapping requestMapping = clazz.getAnnotation(RequestMapping.class);
+                baseUrl = requestMapping.value();
+            }
+            //扫描所有的public方法
+            Method[] methods = clazz.getMethods();
+            for (Method method : methods) {
+                if (!method.isAnnotationPresent(RequestMapping.class)) {
+                    continue;
+                }
+                RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
+                String regex = ("/" + baseUrl + requestMapping.value().replaceAll("\\*", ".*")).replaceAll("/+", "/");
+                Pattern pattern = Pattern.compile(regex);
+                this.handlerMappings.add(new ZdyHandlerMapping(pattern, controller, method));
+                System.out.println(TAG + "Mapping" + regex + "," + method);
+            }
+        }
     }
 
     private void initThemeResolver(ZdyApplicationContext context) {

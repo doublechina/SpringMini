@@ -15,14 +15,15 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Controller
+@RequestMapping("/web")
 public class MyAction {
 
     @Autowrited IDemoService demoService;
 
     @Autowrited
-    IQueryService queryService;
+    private IQueryService queryService;
     @Autowrited
-    IModifyService modifyService;
+    private IModifyService modifyService;
     @RequestMapping("/index.html")
     public void query() {
     }
