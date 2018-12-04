@@ -3,6 +3,7 @@ package com.daycodeday.spring.context;
 import com.daycodeday.spring.annotation.Autowrited;
 import com.daycodeday.spring.annotation.Controller;
 import com.daycodeday.spring.annotation.Service;
+import com.daycodeday.spring.aop.ZdyAopConfig;
 import com.daycodeday.spring.beans.ZdyBeanDefinition;
 import com.daycodeday.spring.beans.ZdyBeanPostProcessor;
 import com.daycodeday.spring.beans.ZdyBeanWrapper;
@@ -10,11 +11,14 @@ import com.daycodeday.spring.context.support.BeanDefinitionReader;
 import com.daycodeday.spring.core.BeanFactory;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory implements BeanFactory {
     private String[] configLocations;
@@ -52,12 +56,13 @@ public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory impleme
         for (Map.Entry<String, ZdyBeanDefinition> beanDefinitionEntry : this.beanDefinitionMap.entrySet()) {
             String beanName = beanDefinitionEntry.getKey();
             if (!beanDefinitionEntry.getValue().isLazyInit()) {
-                getBean(beanName);
+                Object object=getBean(beanName);
+                System.out.println(object);
             }
         }
         //TODO 暴力解决空指针问题
         for (Map.Entry<String, ZdyBeanWrapper> beanWrapperEntry : this.beanWrapperMap.entrySet()) {
-            populateBean(beanWrapperEntry.getKey(), beanWrapperEntry.getValue().getWrappedInstance());
+            populateBean(beanWrapperEntry.getKey(), beanWrapperEntry.getValue().getOriginalInstance());
         }
     }
 
@@ -83,6 +88,25 @@ public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory impleme
                 e.printStackTrace();
             }
         }
+    }
+
+    private ZdyAopConfig instantionAopConfig(ZdyBeanDefinition beanDefinition) throws ClassNotFoundException, IllegalAccessException, InstantiationException, NoSuchMethodException {
+        ZdyAopConfig config = new ZdyAopConfig();
+        String expression = reader.getConfig().getProperty("pointCut");
+        String[] before = reader.getConfig().getProperty("aspectBefore").split("\\s");
+        String[] after = reader.getConfig().getProperty("aspectBefore").split("\\s");
+        String className = beanDefinition.getBeanClassName();
+        Class<?> clazz = Class.forName(className);
+        Pattern pattern = Pattern.compile(expression);
+        Class aspectClass = Class.forName(before[0]);
+        //在这里得到的方法是原生的方法
+        for (Method m : clazz.getMethods()) {
+            Matcher matcher=pattern.matcher(m.toString());
+            if (matcher.matches()){
+                config.put(m,aspectClass.newInstance(),new Method[]{aspectClass.getMethod(before[1]),aspectClass.getMethod(after[1])});
+            }
+        }
+        return config;
     }
 
     /**
@@ -147,6 +171,7 @@ public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory impleme
             //在实例化调用之前调用一次
             beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
             ZdyBeanWrapper beanWrapper = new ZdyBeanWrapper(instance);
+            beanWrapper.setAopConfig(instantionAopConfig(beanDefinition));
             beanWrapper.setPostProcessor(beanPostProcessor);
             this.beanWrapperMap.put(beanName, beanWrapper);
             //TODO 被注入的对象没有实例化，会导致空指针，待解决问题
@@ -198,7 +223,7 @@ public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory impleme
 //        return getBeanFactory().getBeanDefinitionNames();
     }
 
-    public Properties getConfig(){
+    public Properties getConfig() {
         return this.reader.getConfig();
     }
 

@@ -6,12 +6,13 @@ public class LogAspect {
      */
     public void before() {
         //这个方法中的逻辑，市是由我们自己写的
+        System.out.println("Invoker Before Method");
     }
 
     /**
      * 在调用一个方法之后，执行这个方法
      */
     public void after() {
-
+        System.out.println("Invoker After Method");
     }
 }

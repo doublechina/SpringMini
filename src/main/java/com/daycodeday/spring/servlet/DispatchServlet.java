@@ -2,6 +2,7 @@ package com.daycodeday.spring.servlet;
 
 import com.daycodeday.demo.action.DemoAction;
 import com.daycodeday.spring.annotation.*;
+import com.daycodeday.spring.aop.ZdyAopProxyUtils;
 import com.daycodeday.spring.context.ZdyApplicationContext;
 import com.daycodeday.spring.webmvc.ModelAndView;
 import com.daycodeday.spring.webmvc.ZdyHandlerAdapter;
@@ -249,7 +250,15 @@ public class DispatchServlet extends HttpServlet {
         //首先从容器中取到所有的实例
         String[] beanNames = context.getBeanDefinitionNames();
         for (String beanName : beanNames) {
-            Object controller = context.getBean(beanName);
+            //到了MVC层，对外提供的方法只有一个getBean方法
+            //返回的对象不是BeanWrapper，怎么办？
+            Object proxy = context.getBean(beanName);
+            Object controller = null;
+            try {
+                controller = ZdyAopProxyUtils.getTargetObject(proxy);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             Class<?> clazz = controller.getClass();
             if (!clazz.isAnnotationPresent(Controller.class)) {
                 continue;
@@ -340,8 +349,7 @@ public class DispatchServlet extends HttpServlet {
             return;
         }
         try {
-            for (String className :
-                    classNames) {
+            for (String className : classNames) {
                 Class<?> clazz = Class.forName(className);
                 //在Spring中用的多个子方法来处理的
                 //parseArray，parseMap

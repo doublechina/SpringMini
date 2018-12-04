@@ -1,5 +1,6 @@
 package com.daycodeday.spring.beans;
 
+import com.daycodeday.spring.aop.ZdyAopConfig;
 import com.daycodeday.spring.aop.ZdyAopProxy;
 import com.daycodeday.spring.core.FactoryBean;
 
@@ -49,5 +50,12 @@ public class ZdyBeanWrapper extends FactoryBean {
 
     public void setPostProcessor(ZdyBeanPostProcessor postProcessor) {
         this.postProcessor = postProcessor;
+    }
+    public void setAopConfig(ZdyAopConfig config){
+        aopProxy.setConfig(config);
+    }
+
+    public Object getOriginalInstance() {
+        return originalInstance;
     }
 }

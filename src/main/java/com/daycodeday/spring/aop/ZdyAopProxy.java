@@ -32,17 +32,18 @@ public class ZdyAopProxy implements InvocationHandler {
 
     @Override
     public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
+        Method m=this.target.getClass().getMethod(method.getName(),method.getParameterTypes());
         //在原始方法调用以前要执行的增强代码
-        if (config.contains(method)) {
-            ZdyAopConfig.ZdyAspect aspect = config.get(method);
-            aspect.getPoints()[0].invoke(aspect.getAspect());
+        if (config.contains(m)) {
+            ZdyAopConfig.ZdyAspect aspect = config.get(m);
+            aspect.getPoints()[0].invoke(aspect);
         }
         //反射调用原始的方法
-        Object obj = method.invoke(this.target, objects);
+        Object obj = m.invoke(this.target, objects);
         //在原始方法调用以后要执行的增强代码
-        if (config.contains(method)) {
-            ZdyAopConfig.ZdyAspect aspect = config.get(method);
-            aspect.getPoints()[1].invoke(aspect.getAspect());
+        if (config.contains(m)) {
+            ZdyAopConfig.ZdyAspect aspect = config.get(m);
+            aspect.getPoints()[1].invoke(aspect);
         }
         //将最原始的返回值返回出去
         return obj;
