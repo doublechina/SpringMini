@@ -4,7 +4,7 @@ package com.daycodeday.spring.beans;
  * 用来存储配置文件中的信息
  * 相当于的保存在内存中的配置
  */
-public class BeanDefinition {
+public class ZdyBeanDefinition {
     private String beanClassName;
     private boolean lazyInit=false;
     private String factoryBeanName;

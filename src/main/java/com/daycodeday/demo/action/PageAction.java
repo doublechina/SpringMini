@@ -1,4 +1,4 @@
-package com.daycodeday.demo.mvc.action;
+package com.daycodeday.demo.action;
 
 import com.daycodeday.demo.service.IQueryService;
 import com.daycodeday.spring.annotation.Autowrited;

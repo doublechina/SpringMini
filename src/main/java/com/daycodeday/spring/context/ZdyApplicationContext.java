@@ -1,12 +1,11 @@
 package com.daycodeday.spring.context;
 
-import com.daycodeday.demo.mvc.action.MyAction;
 import com.daycodeday.spring.annotation.Autowrited;
 import com.daycodeday.spring.annotation.Controller;
 import com.daycodeday.spring.annotation.Service;
-import com.daycodeday.spring.beans.BeanDefinition;
-import com.daycodeday.spring.beans.BeanPostProcessor;
-import com.daycodeday.spring.beans.BeanWrapper;
+import com.daycodeday.spring.beans.ZdyBeanDefinition;
+import com.daycodeday.spring.beans.ZdyBeanPostProcessor;
+import com.daycodeday.spring.beans.ZdyBeanWrapper;
 import com.daycodeday.spring.context.support.BeanDefinitionReader;
 import com.daycodeday.spring.core.BeanFactory;
 
@@ -17,15 +16,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ZdyApplicationContext implements BeanFactory {
+public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory implements BeanFactory {
     private String[] configLocations;
     private BeanDefinitionReader reader;
-    //beanDefinitionMap用来保存配置信息
-    private Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
     //用来保证注册式单例的容器
     private Map<String, Object> beanCacheMap = new HashMap<>();
     //用来存储所有的被代理过的对象
-    private Map<String, BeanWrapper> beanWrapperMap = new ConcurrentHashMap<>();
+    private Map<String, ZdyBeanWrapper> beanWrapperMap = new ConcurrentHashMap<>();
 
 
     public ZdyApplicationContext(String... locations) {
@@ -52,14 +49,14 @@ public class ZdyApplicationContext implements BeanFactory {
      * 开始执行自动化的依赖注入
      */
     private void doAutorited() {
-        for (Map.Entry<String, BeanDefinition> beanDefinitionEntry : this.beanDefinitionMap.entrySet()) {
+        for (Map.Entry<String, ZdyBeanDefinition> beanDefinitionEntry : this.beanDefinitionMap.entrySet()) {
             String beanName = beanDefinitionEntry.getKey();
             if (!beanDefinitionEntry.getValue().isLazyInit()) {
                 getBean(beanName);
             }
         }
         //TODO 暴力解决空指针问题
-        for (Map.Entry<String, BeanWrapper> beanWrapperEntry : this.beanWrapperMap.entrySet()) {
+        for (Map.Entry<String, ZdyBeanWrapper> beanWrapperEntry : this.beanWrapperMap.entrySet()) {
             populateBean(beanWrapperEntry.getKey(), beanWrapperEntry.getValue().getWrappedInstance());
         }
     }
@@ -106,7 +103,7 @@ public class ZdyApplicationContext implements BeanFactory {
                 if (beanClass.isInterface()) {
                     continue;
                 }
-                BeanDefinition beanDefinition = reader.registerBean(className);
+                ZdyBeanDefinition beanDefinition = reader.registerBean(className);
                 if (beanDefinition != null) {
                     this.beanDefinitionMap.put(beanDefinition.getFactoryBeanName(), beanDefinition);
                 }
@@ -137,11 +134,11 @@ public class ZdyApplicationContext implements BeanFactory {
      */
     @Override
     public Object getBean(String beanName) {
-        BeanDefinition beanDefinition = this.beanDefinitionMap.get(beanName);
+        ZdyBeanDefinition beanDefinition = this.beanDefinitionMap.get(beanName);
         String className = beanDefinition.getBeanClassName();
         try {
             //生成通知事件
-            BeanPostProcessor beanPostProcessor = new BeanPostProcessor();
+            ZdyBeanPostProcessor beanPostProcessor = new ZdyBeanPostProcessor();
 
             Object instance = instantionBean(beanDefinition);
             if (null == instance) {
@@ -149,7 +146,7 @@ public class ZdyApplicationContext implements BeanFactory {
             }
             //在实例化调用之前调用一次
             beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
-            BeanWrapper beanWrapper = new BeanWrapper(instance);
+            ZdyBeanWrapper beanWrapper = new ZdyBeanWrapper(instance);
             beanWrapper.setPostProcessor(beanPostProcessor);
             this.beanWrapperMap.put(beanName, beanWrapper);
             //TODO 被注入的对象没有实例化，会导致空指针，待解决问题
@@ -171,7 +168,7 @@ public class ZdyApplicationContext implements BeanFactory {
      * @param beanDefinition
      * @return
      */
-    private Object instantionBean(BeanDefinition beanDefinition) {
+    private Object instantionBean(ZdyBeanDefinition beanDefinition) {
         Object instance = null;
         String className = beanDefinition.getBeanClassName();
         try {
@@ -206,4 +203,8 @@ public class ZdyApplicationContext implements BeanFactory {
     }
 
 
+    @Override
+    protected void refreshBeanFactory() {
+
+    }
 }

@@ -3,7 +3,7 @@ package com.daycodeday.spring.beans;
 /**
  * 用户事件监听的
  */
-public class BeanPostProcessor {
+public class ZdyBeanPostProcessor {
     public Object postProcessBeforeInitialization(Object bean, String beanName) {
         return bean;
     }

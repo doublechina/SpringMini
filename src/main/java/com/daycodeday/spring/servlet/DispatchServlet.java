@@ -1,6 +1,6 @@
 package com.daycodeday.spring.servlet;
 
-import com.daycodeday.demo.mvc.action.DemoAction;
+import com.daycodeday.demo.action.DemoAction;
 import com.daycodeday.spring.annotation.*;
 import com.daycodeday.spring.context.ZdyApplicationContext;
 import com.daycodeday.spring.webmvc.ModelAndView;

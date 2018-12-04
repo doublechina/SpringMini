@@ -1,6 +1,6 @@
 package com.daycodeday.spring.context.support;
 
-import com.daycodeday.spring.beans.BeanDefinition;
+import com.daycodeday.spring.beans.ZdyBeanDefinition;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,9 +67,9 @@ public class BeanDefinitionReader {
      * @param className 类名
      * @return
      */
-    public BeanDefinition registerBean(String className) {
+    public ZdyBeanDefinition registerBean(String className) {
         if (this.registerBeanClasses.contains(className)) {
-            BeanDefinition beanDefinition = new BeanDefinition();
+            ZdyBeanDefinition beanDefinition = new ZdyBeanDefinition();
             beanDefinition.setBeanClassName(className);
             beanDefinition.setFactoryBeanName(lowerFirstCase(className.substring(className.lastIndexOf(".") + 1)));
             return beanDefinition;
