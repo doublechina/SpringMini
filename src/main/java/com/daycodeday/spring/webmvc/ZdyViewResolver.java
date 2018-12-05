@@ -34,6 +34,7 @@ public class ZdyViewResolver {
         RandomAccessFile ra = new RandomAccessFile(this.templateFile, "r");
         String line = null;
         while (null != (line = ra.readLine())) {
+            line = new String(line.getBytes("ISO-8859-1"), "utf-8");
             Matcher m = matcher(line);
             while (m.find()) {
                 for (int i = 1; i <= m.groupCount(); i++) {
@@ -41,8 +42,8 @@ public class ZdyViewResolver {
                     String paramName = m.group(i);
                     Object paramValue = mv.getModel().get(paramName);
                     if (null == paramValue) continue;
-                    line = line.replaceAll("￥\\{" + paramValue + "\\}", paramValue.toString());
-
+                    line = line.replaceAll("￥\\{" + paramName + "\\}", paramValue.toString());
+                    line = new String(line.getBytes("utf-8"), "ISO-8859-1");
                 }
             }
             sb.append(line);
@@ -51,7 +52,7 @@ public class ZdyViewResolver {
     }
 
     private Matcher matcher(String str) {
-        Pattern pattern = Pattern.compile("￥\\{(.+?)\\}", Pattern.CASE_INSENSITIVE);
+        Pattern pattern = Pattern.compile("￥\\{(.+?)\\}",Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(str);
         return matcher;
     }
