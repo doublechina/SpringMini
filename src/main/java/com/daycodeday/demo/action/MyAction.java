@@ -24,10 +24,6 @@ public class MyAction {
     private IQueryService queryService;
     @Autowrited
     private IModifyService modifyService;
-    @RequestMapping("/index.html")
-    public void query() {
-    }
-
 
 
     @RequestMapping("/query.json")

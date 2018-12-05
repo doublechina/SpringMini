@@ -249,37 +249,41 @@ public class DispatchServlet extends HttpServlet {
         //map.put(url,Method)
         //首先从容器中取到所有的实例
         String[] beanNames = context.getBeanDefinitionNames();
-        for (String beanName : beanNames) {
-            //到了MVC层，对外提供的方法只有一个getBean方法
-            //返回的对象不是BeanWrapper，怎么办？
-            Object proxy = context.getBean(beanName);
-            Object controller = null;
-            try {
-                controller = ZdyAopProxyUtils.getTargetObject(proxy);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            Class<?> clazz = controller.getClass();
-            if (!clazz.isAnnotationPresent(Controller.class)) {
-                continue;
-            }
-            String baseUrl = "";
-            if (clazz.isAnnotationPresent(RequestMapping.class)) {
-                RequestMapping requestMapping = clazz.getAnnotation(RequestMapping.class);
-                baseUrl = requestMapping.value();
-            }
-            //扫描所有的public方法
-            Method[] methods = clazz.getMethods();
-            for (Method method : methods) {
-                if (!method.isAnnotationPresent(RequestMapping.class)) {
+        try {
+            for (String beanName : beanNames) {
+                //到了MVC层，对外提供的方法只有一个getBean方法
+                //返回的对象不是BeanWrapper，怎么办？
+                Object proxy = context.getBean(beanName);
+                Object controller = null;
+                try {
+                    controller = ZdyAopProxyUtils.getTargetObject(proxy);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                Class<?> clazz = controller.getClass();
+                if (!clazz.isAnnotationPresent(Controller.class)) {
                     continue;
                 }
-                RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
-                String regex = ("/" + baseUrl + requestMapping.value().replaceAll("\\*", ".*")).replaceAll("/+", "/");
-                Pattern pattern = Pattern.compile(regex);
-                this.handlerMappings.add(new ZdyHandlerMapping(pattern, controller, method));
-                System.out.println(TAG + "Mapping" + regex + "," + method);
+                String baseUrl = "";
+                if (clazz.isAnnotationPresent(RequestMapping.class)) {
+                    RequestMapping requestMapping = clazz.getAnnotation(RequestMapping.class);
+                    baseUrl = requestMapping.value();
+                }
+                //扫描所有的public方法
+                Method[] methods = clazz.getMethods();
+                for (Method method : methods) {
+                    if (!method.isAnnotationPresent(RequestMapping.class)) {
+                        continue;
+                    }
+                    RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
+                    String regex = ("/" + baseUrl + requestMapping.value().replaceAll("\\*", ".*")).replaceAll("/+", "/");
+                    Pattern pattern = Pattern.compile(regex);
+                    this.handlerMappings.add(new ZdyHandlerMapping(pattern, controller, method));
+                    System.out.println(TAG + "Mapping" + regex + "," + method);
+                }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

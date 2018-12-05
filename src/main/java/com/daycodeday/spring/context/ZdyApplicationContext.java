@@ -68,7 +68,7 @@ public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory impleme
 
     public void populateBean(String beanName, Object instance) {
         Class clazz = instance.getClass();
-        if ((clazz.isAnnotationPresent(Controller.class) || clazz.isAnnotationPresent(Service.class))) {
+        if (!(clazz.isAnnotationPresent(Controller.class) || clazz.isAnnotationPresent(Service.class))) {
             return;
         }
         Field[] fields = clazz.getDeclaredFields();
