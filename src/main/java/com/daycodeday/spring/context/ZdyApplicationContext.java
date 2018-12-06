@@ -94,7 +94,7 @@ public class ZdyApplicationContext extends ZdyDefaultListableBeanFactory impleme
         ZdyAopConfig config = new ZdyAopConfig();
         String expression = reader.getConfig().getProperty("pointCut");
         String[] before = reader.getConfig().getProperty("aspectBefore").split("\\s");
-        String[] after = reader.getConfig().getProperty("aspectBefore").split("\\s");
+        String[] after = reader.getConfig().getProperty("aspectAfter").split("\\s");
         String className = beanDefinition.getBeanClassName();
         Class<?> clazz = Class.forName(className);
         Pattern pattern = Pattern.compile(expression);
