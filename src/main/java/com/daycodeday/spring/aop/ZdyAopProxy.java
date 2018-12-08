@@ -33,6 +33,7 @@ public class ZdyAopProxy implements InvocationHandler {
     @Override
     public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
         Method m=this.target.getClass().getMethod(method.getName(),method.getParameterTypes());
+        //Spring AOP事务的实现，TransactionManager
         //在原始方法调用以前要执行的增强代码
         if (config.contains(m)) {
             ZdyAopConfig.ZdyAspect aspect = config.get(m);
